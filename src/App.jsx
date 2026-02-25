@@ -1,33 +1,46 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 
 import './App.css'
+
+function debounce(callback, delay){
+  let timer;
+  return (value) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      callback(value)
+    }, delay)
+  }
+}
+
 
 function App() {
   const [query, setQuery] = useState("")
   const [suggestions, setSuggestions] = useState([])
 
-  useEffect(() => {
-    async function getProductsData(){
+  const fetchProducts = useCallback(async (value) => {
     try{
-      if (query.trim() === ""){
+      if (value.trim() === ""){
         setSuggestions([])
         return
       }
-      const productsData = await fetch(`http://localhost:3333/products?search=${query}`)
+      const productsData = await fetch(`http://localhost:3333/products?search=${encodeURIComponent(value)}`)
       if (!productsData.ok){
         console.error("Prodotto non trovato")
         return
       }
       const products = await productsData.json()
-      console.log(products)
       setSuggestions(products)
-    }catch(error){
+  }catch(error){
       console.error(error)
       setSuggestions([])
     }
-  } 
-  getProductsData()
-  }, [query])
+  }, [])
+ 
+  const debouncedFetch = useMemo(
+  () => debounce(fetchProducts, 300),
+  [fetchProducts]
+)
+  useEffect(() => {debouncedFetch(query)}, [query])
 
   return (
     <>
